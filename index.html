@@ -1,1 +1,188 @@
-<!DOCTYPE html> <html lang="zh"> <head> <meta charset="UTF-8"> <title>Baccarat Trend Analyzer Pro</title> <style> body { background:#0b0b0b; color:#eee; font-family:Arial; text-align:center; padding:20px; } h1 { color:gold; } button { padding:12px 26px; font-size:18px; margin:6px; border:none; border-radius:6px; cursor:pointer; } .banker { background:#b33939;color:#fff;} .player { background:#227093;color:#fff;} .tie { background:#218c74;color:#fff;} .reset { background:#84817a;color:#fff;} .panel { background:#1c1c1c; margin-top:15px; padding:15px; border-radius:8px; } .danger { color:red;font-weight:bold;} .warn { color:orange;font-weight:bold;} .good { color:#2ecc71;font-weight:bold;} .history { font-size:14px; word-break:break-all; } </style> </head> <body> <h1>Baccarat Trend Analyzer · PRO</h1> <div> <button class="banker" onclick="add('B')">庄</button> <button class="player" onclick="add('P')">闲</button> <button class="tie" onclick="add('T')">和</button> <button class="reset" onclick="resetAll()">重置</button> </div> <div class="panel"> <div id="round">局数：0</div> <div id="pattern">识别形态：-</div> <div id="predict">预测方向：-</div> <div id="risk">系统状态：-</div> </div> <div class="panel"> <div>历史记录：</div> <div id="history" class="history"></div> </div> <script> let history = []; let lastPrediction = null; let failCount = 0; function add(r){ history.push(r); analyze(); } function cleanHistory(){ return history.filter(x=>x!=='T'); } function analyze(){ document.getElementById("round").innerText = "局数：" + history.length; document.getElementById("history").innerText = history.join(" "); let h = cleanHistory(); if(h.length < 6){ show("-", "-", "观察中", ""); return; } let pattern = "观察"; let prediction = null; // === 长龙 === let streak = 1; for(let i=h.length-1;i>0;i--){ if(h[i]===h[i-1]) streak++; else break; } if(streak>=4){ pattern = "长龙 ("+streak+")"; prediction = h[h.length-1]; } // === 单跳 === if(!prediction){ let jump = true; for(let i=h.length-6;i<h.length-1;i++){ if(h[i]===h[i+1]){ jump=false; break;} } if(jump){ pattern = "单跳节奏"; prediction = h[h.length-1]==='B'?'P':'B'; } } // === 两方一厅 === if(!prediction){ let a = h.slice(-3).join(""); let b = h.slice(-6,-3).join(""); if((a==="BBP" && b==="BBP") || (a==="PPB" && b==="PPB")){ pattern = "两方一厅"; prediction = a[0]; } } // === 双连节奏 === if(!prediction){ let p = h.slice(-6).join(""); if(p==="BBPPBB"||p==="PPBBPP"){ pattern = "双连节奏"; prediction = h[h.length-1]; } } // 风控 if(lastPrediction && prediction){ let lastResult = h[h.length-1]; if(lastPrediction!==lastResult) failCount++; else failCount=0; } lastPrediction = prediction; if(failCount>=2){ show(pattern, "-", "系统正在计算，不建议下注", "danger"); }else{ show(pattern, prediction? (prediction==="B"?"庄":"闲"):"-", "可观察", "good"); } } function show(pat, pred, risk, cls){ document.getElementById("pattern").innerText = "识别形态：" + pat; document.getElementById("predict").innerText = "预测方向：" + pred; let r = document.getElementById("risk"); r.innerText = "系统状态：" + risk; r.className = cls; } function resetAll(){ history=[]; lastPrediction=null; failCount=0; document.getElementById("round").innerText="局数：0"; document.getElementById("pattern").innerText="识别形态：-"; document.getElementById("predict").innerText="预测方向：-"; document.getElementById("risk").innerText="系统状态：-"; document.getElementById("history").innerText=""; } </script> </body> </html>
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>Baccarat Trend Analyzer Pro</title>
+
+<!-- Telegram Web App 支持 -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<style>
+body {
+    background:#0b0b0b;
+    color:#eee;
+    font-family:Arial;
+    text-align:center;
+    padding:20px;
+}
+h1 { color:gold; }
+
+button {
+    padding:12px 26px;
+    font-size:18px;
+    margin:6px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+}
+.banker { background:#b33939;color:#fff;}
+.player { background:#227093;color:#fff;}
+.tie { background:#218c74;color:#fff;}
+.reset { background:#84817a;color:#fff;}
+
+.panel {
+    background:#1c1c1c;
+    margin-top:15px;
+    padding:15px;
+    border-radius:8px;
+}
+
+.danger { color:red;font-weight:bold;}
+.warn { color:orange;font-weight:bold;}
+.good { color:#2ecc71;font-weight:bold;}
+
+.history {
+    font-size:14px;
+    word-break:break-all;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Baccarat Trend Analyzer · PRO</h1>
+
+<div>
+    <button class="banker" id="btnB">庄</button>
+    <button class="player" id="btnP">闲</button>
+    <button class="tie" id="btnT">和</button>
+    <button class="reset" id="btnR">重置</button>
+</div>
+
+<div class="panel">
+    <div id="round">局数：0</div>
+    <div id="pattern">识别形态：-</div>
+    <div id="predict">预测方向：-</div>
+    <div id="risk">系统状态：-</div>
+</div>
+
+<div class="panel">
+    <div>历史记录：</div>
+    <div id="history" class="history"></div>
+</div>
+
+<script>
+// Telegram Web App 初始化（必须）
+if (window.Telegram && Telegram.WebApp) {
+    Telegram.WebApp.ready();
+    Telegram.WebApp.expand();
+}
+
+// ====== 程序逻辑 ======
+let history = [];
+let lastPrediction = null;
+let failCount = 0;
+
+function add(r){
+    history.push(r);
+    analyze();
+}
+
+function cleanHistory(){
+    return history.filter(x => x !== 'T');
+}
+
+function analyze(){
+    document.getElementById("round").innerText = "局数：" + history.length;
+    document.getElementById("history").innerText = history.join(" ");
+
+    let h = cleanHistory();
+    if (h.length < 6) {
+        show("-", "-", "观察中", "");
+        return;
+    }
+
+    let pattern = "观察";
+    let prediction = null;
+
+    // 长龙
+    let streak = 1;
+    for (let i = h.length - 1; i > 0; i--) {
+        if (h[i] === h[i - 1]) streak++;
+        else break;
+    }
+    if (streak >= 4) {
+        pattern = "长龙 (" + streak + ")";
+        prediction = h[h.length - 1];
+    }
+
+    // 单跳
+    if (!prediction) {
+        let jump = true;
+        for (let i = h.length - 6; i < h.length - 1; i++) {
+            if (h[i] === h[i + 1]) {
+                jump = false;
+                break;
+            }
+        }
+        if (jump) {
+            pattern = "单跳节奏";
+            prediction = h[h.length - 1] === 'B' ? 'P' : 'B';
+        }
+    }
+
+    // 两方一厅
+    if (!prediction) {
+        let a = h.slice(-3).join("");
+        let b = h.slice(-6, -3).join("");
+        if ((a === "BBP" && b === "BBP") || (a === "PPB" && b === "PPB")) {
+            pattern = "两方一厅";
+            prediction = a[0];
+        }
+    }
+
+    // 风控
+    if (lastPrediction && prediction) {
+        let lastResult = h[h.length - 1];
+        if (lastPrediction !== lastResult) failCount++;
+        else failCount = 0;
+    }
+    lastPrediction = prediction;
+
+    if (failCount >= 2) {
+        show(pattern, "-", "系统正在计算，不建议下注", "danger");
+    } else {
+        show(pattern, prediction ? (prediction === "B" ? "庄" : "闲") : "-", "可观察", "good");
+    }
+}
+
+function show(pat, pred, risk, cls){
+    document.getElementById("pattern").innerText = "识别形态：" + pat;
+    document.getElementById("predict").innerText = "预测方向：" + pred;
+
+    let r = document.getElementById("risk");
+    r.innerText = "系统状态：" + risk;
+    r.classList.remove("danger","warn","good");
+    if (cls) r.classList.add(cls);
+}
+
+function resetAll(){
+    history = [];
+    lastPrediction = null;
+    failCount = 0;
+    document.getElementById("round").innerText = "局数：0";
+    document.getElementById("pattern").innerText = "识别形态：-";
+    document.getElementById("predict").innerText = "预测方向：-";
+    document.getElementById("risk").innerText = "系统状态：-";
+    document.getElementById("history").innerText = "";
+}
+
+// ====== 关键：JS 绑定按钮（Telegram 必须）=====
+document.getElementById("btnB").onclick = () => add('B');
+document.getElementById("btnP").onclick = () => add('P');
+document.getElementById("btnT").onclick = () => add('T');
+document.getElementById("btnR").onclick = resetAll;
+</script>
+
+</body>
+</html>
