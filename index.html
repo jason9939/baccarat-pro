@@ -17,18 +17,14 @@ body {
 }
 h1 { color:gold; }
 
-input, button {
-    padding:12px;
+button {
+    padding:12px 26px;
     font-size:18px;
     margin:6px;
     border:none;
     border-radius:6px;
-}
-
-button {
     cursor:pointer;
 }
-
 .banker { background:#b33939;color:#fff;}
 .player { background:#227093;color:#fff;}
 .tie { background:#218c74;color:#fff;}
@@ -49,51 +45,32 @@ button {
     font-size:14px;
     word-break:break-all;
 }
-
-#baccaratPanel {
-    display:none; /* 登录前隐藏 */
-}
 </style>
 </head>
 <body>
 
 <h1>Baccarat Trend Analyzer · PRO</h1>
 
-<!-- 登录面板 -->
-<div class="panel" id="loginPanel">
-    <input type="password" id="pwd" placeholder="请输入密码" />
-    <button id="loginBtn">登录</button>
-    <div id="loginMsg"></div>
+<div>
+    <button class="banker" id="btnB">庄</button>
+    <button class="player" id="btnP">闲</button>
+    <button class="tie" id="btnT">和</button>
+    <button class="reset" id="btnR">重置</button>
 </div>
 
-<!-- Baccarat 功能面板 -->
-<div id="baccaratPanel">
+<div class="panel">
+    <div id="round">局数：0</div>
+    <div id="pattern">识别形态：-</div>
+    <div id="predict">预测方向：-</div>
+    <div id="risk">系统状态：-</div>
+</div>
 
-    <div>
-        <button class="banker" id="btnB">庄</button>
-        <button class="player" id="btnP">闲</button>
-        <button class="tie" id="btnT">和</button>
-        <button class="reset" id="btnR">重置</button>
-    </div>
-
-    <div class="panel">
-        <div id="round">局数：0</div>
-        <div id="pattern">识别形态：-</div>
-        <div id="predict">预测方向：-</div>
-        <div id="risk">系统状态：-</div>
-    </div>
-
-    <div class="panel">
-        <div>历史记录：</div>
-        <div id="history" class="history"></div>
-    </div>
-
+<div class="panel">
+    <div>历史记录：</div>
+    <div id="history" class="history"></div>
 </div>
 
 <script>
-const API_URL = "http://localhost:3000"; // 替换为你的后端地址
-
-// ===== Telegram WebApp 初始化 =====
 if (window.Telegram && Telegram.WebApp) {
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
@@ -103,36 +80,6 @@ let history = [];
 let lastPrediction = null;
 let failCount = 0;
 
-// ===== 登录功能 =====
-document.getElementById("loginBtn").addEventListener("click", async () => {
-    const pwd = document.getElementById("pwd").value;
-    const tgId = Telegram.WebApp.initDataUnsafe.user.id;
-
-    if (!pwd) {
-        document.getElementById("loginMsg").innerText = "请输入密码";
-        return;
-    }
-
-    try {
-        const res = await fetch(`${API_URL}/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ tgId, password: pwd })
-        });
-        const data = await res.json();
-        document.getElementById("loginMsg").innerText = data.msg;
-
-        if (data.ok) {
-            document.getElementById("loginPanel").style.display = "none";
-            document.getElementById("baccaratPanel").style.display = "block";
-        }
-    } catch (err) {
-        console.error(err);
-        document.getElementById("loginMsg").innerText = "登录失败，请稍后再试";
-    }
-});
-
-// ===== Baccarat 功能 =====
 function add(r){
     history.push(r);
     analyze();
@@ -223,7 +170,7 @@ function resetAll(){
     document.getElementById("history").innerText="";
 }
 
-// ===== 绑定按钮事件 =====
+// ====== 关键：保证 Telegram + 浏览器都能点 ======
 document.addEventListener("DOMContentLoaded", function(){
     document.getElementById("btnB").addEventListener("click", ()=>add('B'));
     document.getElementById("btnP").addEventListener("click", ()=>add('P'));
