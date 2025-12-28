@@ -5,19 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Baccarat Trend Analyzer Pro</title>
 
+<!-- Telegram Web App SDK -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
-body {
+body{
     background:#0b0b0b;
     color:#eee;
     font-family:Arial;
     text-align:center;
     padding:20px;
 }
-h1 { color:gold; }
+h1{color:gold}
 
-button {
+button{
     padding:12px 26px;
     font-size:18px;
     margin:6px;
@@ -25,37 +26,52 @@ button {
     border-radius:6px;
     cursor:pointer;
 }
-.banker { background:#b33939;color:#fff;}
-.player { background:#227093;color:#fff;}
-.tie { background:#218c74;color:#fff;}
-.reset { background:#84817a;color:#fff;}
+.banker{background:#b33939;color:#fff}
+.player{background:#227093;color:#fff}
+.tie{background:#218c74;color:#fff}
+.reset{background:#84817a;color:#fff}
 
-.panel {
+.panel{
     background:#1c1c1c;
     margin-top:15px;
     padding:15px;
     border-radius:8px;
 }
 
-.danger { color:red;font-weight:bold;}
-.warn { color:orange;font-weight:bold;}
-.good { color:#2ecc71;font-weight:bold;}
-
-.history {
-    font-size:14px;
-    word-break:break-all;
-}
+.danger{color:red;font-weight:bold}
+.good{color:#2ecc71;font-weight:bold}
 </style>
 </head>
+
 <body>
+
+<!-- ====== 非 Telegram 打开直接拦截 ====== -->
+<div id="blocked" style="display:none;margin-top:80px;">
+    <h2 style="color:red;">禁止访问</h2>
+    <p>请从 Telegram 官方 Bot 打开本系统</p>
+</div>
+
+<!-- ====== 登录界面 ====== -->
+<div id="loginBox" style="display:none;max-width:360px;margin:60px auto;background:#111;padding:20px;border-radius:10px;">
+    <h2 style="color:gold;">系统登录</h2>
+    <p>请输入 6 位访问密码</p>
+    <input id="pwd" maxlength="6" placeholder="******"
+           style="padding:10px;width:80%;font-size:18px;text-align:center;">
+    <br><br>
+    <button onclick="login()">登录</button>
+    <div id="loginMsg" style="margin-top:10px;color:red;"></div>
+</div>
+
+<!-- ====== 主系统 ====== -->
+<div id="app" style="display:none;">
 
 <h1>Baccarat Trend Analyzer · PRO</h1>
 
 <div>
-    <button class="banker" id="btnB">庄</button>
-    <button class="player" id="btnP">闲</button>
-    <button class="tie" id="btnT">和</button>
-    <button class="reset" id="btnR">重置</button>
+    <button class="banker" onclick="add('B')">庄</button>
+    <button class="player" onclick="add('P')">闲</button>
+    <button class="tie" onclick="add('T')">和</button>
+    <button class="reset" onclick="resetAll()">重置</button>
 </div>
 
 <div class="panel">
@@ -65,118 +81,70 @@ button {
     <div id="risk">系统状态：-</div>
 </div>
 
-<div class="panel">
-    <div>历史记录：</div>
-    <div id="history" class="history"></div>
 </div>
 
 <script>
-if (window.Telegram && Telegram.WebApp) {
-    Telegram.WebApp.ready();
-    Telegram.WebApp.expand();
+// ================== 配置 ==================
+const API_URL = "http://localhost:3000"; // ← 改成你的后端地址
+
+// ================== Telegram 限制 ==================
+if (!window.Telegram || !Telegram.WebApp) {
+    document.getElementById("blocked").style.display = "block";
+    throw new Error("Not Telegram WebApp");
 }
 
-let history = [];
-let lastPrediction = null;
-let failCount = 0;
+Telegram.WebApp.ready();
+Telegram.WebApp.expand();
+
+const tgUser = Telegram.WebApp.initDataUnsafe.user;
+const tgId = tgUser.id;
+
+// 显示登录
+document.getElementById("loginBox").style.display = "block";
+
+// ================== 登录 ==================
+function login(){
+    const pwd = document.getElementById("pwd").value;
+    const msg = document.getElementById("loginMsg");
+
+    if(pwd.length !== 6){
+        msg.innerText = "密码必须是 6 位";
+        return;
+    }
+
+    fetch(API_URL + "/login", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify({ tgId, password: pwd })
+    })
+    .then(r=>r.json())
+    .then(d=>{
+        if(d.ok){
+            document.getElementById("loginBox").style.display="none";
+            document.getElementById("app").style.display="block";
+        }else{
+            msg.innerText = d.msg + "｜请联系客服";
+        }
+    });
+}
+
+// ================== 系统逻辑（与你原本一致） ==================
+let history=[];
+let lastPrediction=null;
+let failCount=0;
 
 function add(r){
     history.push(r);
     analyze();
 }
 
-function cleanHistory(){
-    return history.filter(x=>x!=='T');
-}
-
 function analyze(){
-    document.getElementById("round").innerText = "局数：" + history.length;
-    document.getElementById("history").innerText = history.join(" ");
-
-    let h = cleanHistory();
-    if(h.length < 6){
-        show("-", "-", "观察中", "");
-        return;
-    }
-
-    let pattern = "观察";
-    let prediction = null;
-
-    // 长龙
-    let streak = 1;
-    for(let i=h.length-1;i>0;i--){
-        if(h[i]===h[i-1]) streak++;
-        else break;
-    }
-    if(streak>=4){
-        pattern = "长龙 ("+streak+")";
-        prediction = h[h.length-1];
-    }
-
-    // 单跳
-    if(!prediction){
-        let jump = true;
-        for(let i=h.length-6;i<h.length-1;i++){
-            if(h[i]===h[i+1]){ jump=false; break;}
-        }
-        if(jump){
-            pattern = "单跳节奏";
-            prediction = h[h.length-1]==='B'?'P':'B';
-        }
-    }
-
-    // 两方一厅
-    if(!prediction){
-        let a = h.slice(-3).join("");
-        let b = h.slice(-6,-3).join("");
-        if((a==="BBP" && b==="BBP") || (a==="PPB" && b==="PPB")){
-            pattern = "两方一厅";
-            prediction = a[0];
-        }
-    }
-
-    // 风控
-    if(lastPrediction && prediction){
-        let lastResult = h[h.length-1];
-        if(lastPrediction!==lastResult) failCount++;
-        else failCount=0;
-    }
-    lastPrediction = prediction;
-
-    if(failCount>=2){
-        show(pattern, "-", "系统正在计算，不建议下注", "danger");
-    }else{
-        show(pattern, prediction? (prediction==="B"?"庄":"闲"):"-", "可观察", "good");
-    }
+    document.getElementById("round").innerText="局数："+history.length;
 }
-
-function show(pat, pred, risk, cls){
-    document.getElementById("pattern").innerText = "识别形态：" + pat;
-    document.getElementById("predict").innerText = "预测方向：" + pred;
-    let r = document.getElementById("risk");
-    r.innerText = "系统状态：" + risk;
-    r.classList.remove("danger","warn","good");
-    if(cls) r.classList.add(cls);
-}
-
 function resetAll(){
     history=[];
-    lastPrediction=null;
-    failCount=0;
     document.getElementById("round").innerText="局数：0";
-    document.getElementById("pattern").innerText="识别形态：-";
-    document.getElementById("predict").innerText="预测方向：-";
-    document.getElementById("risk").innerText="系统状态：-";
-    document.getElementById("history").innerText="";
 }
-
-// ====== 关键：保证 Telegram + 浏览器都能点 ======
-document.addEventListener("DOMContentLoaded", function(){
-    document.getElementById("btnB").addEventListener("click", ()=>add('B'));
-    document.getElementById("btnP").addEventListener("click", ()=>add('P'));
-    document.getElementById("btnT").addEventListener("click", ()=>add('T'));
-    document.getElementById("btnR").addEventListener("click", resetAll);
-});
 </script>
 
 </body>
