@@ -1,251 +1,213 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Baccarat Trend Analyzer Pro</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baccarat Analyzer Pro - 受限访问</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial; background: #121212; color: #e0e0e0; display: flex; flex-direction: column; align-items: center; padding: 20px; min-height: 100vh; margin: 0; }
+        
+        /* 登录遮罩层 */
+        #login-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: #1a1a1a; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; z-index: 1000;
+        }
+        .login-box { background: #2d2d2d; padding: 30px; border-radius: 12px; box-shadow: 0 0 20px rgba(0,0,0,0.5); text-align: center; }
+        .login-box input { padding: 12px; font-size: 18px; border-radius: 5px; border: 1px solid #444; background: #111; color: #fff; width: 200px; margin-bottom: 15px; text-align: center; }
+        .login-box button { background: #d4af37; color: #000; border: none; padding: 10px 25px; border-radius: 5px; cursor: pointer; font-weight: bold; }
 
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+        /* 主内容区域 - 初始隐藏 */
+        #main-content { display: none; width: 95%; max-width: 700px; }
 
-<style>
-body {
-    background:#0b0b0b;
-    color:#eee;
-    font-family:Arial;
-    text-align:center;
-    padding:20px;
-}
-h1 { color:gold; }
+        .container { background: #1e1e1e; padding: 25px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.7); border: 1px solid #333; }
+        h1 { text-align: center; color: #ffca28; margin-bottom: 20px; font-size: 24px; }
+        
+        /* 预测面板与状态 */
+        .prediction-panel { background: #252525; border-radius: 10px; padding: 20px; text-align: center; margin-bottom: 20px; border: 1px solid #444; position: relative; }
+        #next-move { font-size: 32px; font-weight: bold; margin: 10px 0; }
+        #status-tag { position: absolute; top: 10px; right: 10px; font-size: 12px; padding: 3px 8px; border-radius: 4px; }
+        .status-active { background: #2e7d32; color: white; }
+        .status-watching { background: #c62828; color: white; }
+        
+        .stats { display: flex; justify-content: space-between; font-size: 13px; color: #bbb; margin-bottom: 15px; background: #2c2c2c; padding: 8px; border-radius: 5px; }
+        .controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        button.game-btn { padding: 18px; border: none; border-radius: 10px; font-size: 20px; font-weight: bold; cursor: pointer; transition: 0.2s; color: white; }
+        .btn-B { background: #d32f2f; }
+        .btn-P { background: #1976d2; }
+        .btn-T { background: #388e3c; }
 
-button {
-    padding:12px 26px;
-    font-size:18px;
-    margin:6px;
-    border:none;
-    border-radius:6px;
-    cursor:pointer;
-}
-.banker { background:#b33939;color:#fff;}
-.player { background:#227093;color:#fff;}
-.tie { background:#218c74;color:#fff;}
-.reset { background:#84817a;color:#fff;}
-
-.panel {
-    background:#1c1c1c;
-    margin-top:15px;
-    padding:15px;
-    border-radius:8px;
-}
-
-.danger { color:red;font-weight:bold;}
-.warn { color:orange;font-weight:bold;}
-.good { color:#2ecc71;font-weight:bold;}
-
-.history {
-    font-size:14px;
-    word-break:break-all;
-}
-
-/* ===== 密码遮罩 ===== */
-#lockScreen {
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,0.92);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    z-index:9999;
-}
-
-#lockBox {
-    background:#1c1c1c;
-    padding:30px;
-    border-radius:10px;
-    width:280px;
-}
-
-#lockBox h2 {
-    color:gold;
-    margin-bottom:15px;
-}
-
-#lockBox input {
-    width:100%;
-    padding:10px;
-    font-size:16px;
-    border-radius:5px;
-    border:none;
-    text-align:center;
-}
-
-#lockBox button {
-    width:100%;
-    margin-top:12px;
-    background:gold;
-    color:#000;
-    font-weight:bold;
-}
-
-#errorMsg {
-    color:red;
-    margin-top:10px;
-    display:none;
-}
-</style>
+        .history-list { display: flex; flex-wrap: wrap-reverse; gap: 6px; margin-top: 20px; min-height: 40px; padding: 10px; background: #000; border-radius: 8px; }
+        .dot { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; }
+        .B { background: #d32f2f; } .P { background: #1976d2; } .T { background: #388e3c; }
+        .log-area { font-size: 12px; color: #888; max-height: 80px; overflow-y: auto; background: #1a1a1a; padding: 10px; border-radius: 5px; margin-top: 10px; }
+    </style>
 </head>
 <body>
 
-<!-- ===== 密码层 ===== -->
-<div id="lockScreen">
-    <div id="lockBox">
-        <h2>请输入密码</h2>
-        <input type="password" id="pwd" placeholder="Password">
-        <button onclick="checkPwd()">进入系统</button>
-        <div id="errorMsg">密码错误</div>
+<!-- 登录界面 -->
+<div id="login-overlay">
+    <div class="login-box">
+        <h2 style="color:#d4af37">系统锁定</h2>
+        <p style="color:#888; font-size:12px">请输入授权密码访问</p>
+        <input type="password" id="password-input" placeholder="输入密码..." onkeydown="if(event.keyCode==13) checkPassword()">
+        <br>
+        <button onclick="checkPassword()">验证并登入</button>
+        <p id="login-error" style="color:#ff5252; font-size:14px; margin-top:10px; visibility:hidden;">密码错误！</p>
     </div>
 </div>
 
-<h1>Baccarat Trend Analyzer · PRO</h1>
+<!-- 分析仪主内容 -->
+<div id="main-content">
+    <div class="container">
+        <h1>BACCARAT ANALYZER <span style="font-size: 12px; font-weight: normal; color: #777;">智能止损版</span></h1>
 
-<div>
-    <button class="banker" id="btnB">庄</button>
-    <button class="player" id="btnP">闲</button>
-    <button class="tie" id="btnT">和</button>
-    <button class="reset" id="btnR">重置</button>
-</div>
+        <div class="prediction-panel">
+            <span id="status-tag" class="status-active">分析中</span>
+            <div style="color: #888; font-size: 14px;">下一局预测参考</div>
+            <div id="next-move">等待数据...</div>
+            <div id="reason" style="font-size: 14px; color: #aaa;">请输入历史记录</div>
+        </div>
 
-<div class="panel">
-    <div id="round">局数：0</div>
-    <div id="pattern">识别形态：-</div>
-    <div id="predict">预测方向：-</div>
-    <div id="risk">系统状态：-</div>
-</div>
+        <div class="stats">
+            <span>当前连输: <b id="lose-count">0</b></span>
+            <span>虚拟回归: <b id="win-streak">0</b>/2</span>
+        </div>
 
-<div class="panel">
-    <div>历史记录：</div>
-    <div id="history" class="history"></div>
+        <div class="controls">
+            <button class="game-btn btn-B" onclick="handleInput('B')">庄</button>
+            <button class="game-btn btn-P" onclick="handleInput('P')">闲</button>
+            <button class="game-btn btn-T" onclick="handleInput('T')">和</button>
+        </div>
+
+        <div class="history-list" id="history-box"></div>
+        <div class="log-area" id="log">系统已启动...</div>
+        
+        <div style="text-align: center; margin-top: 15px;">
+            <button onclick="logout()" style="background: #333; color:#777; border:none; padding:5px 10px; cursor:pointer;">登出系统</button>
+            <button onclick="reset()" style="background: #444; color:#fff; border:none; padding:5px 15px; cursor:pointer; margin-left:10px;">清空数据</button>
+        </div>
+    </div>
 </div>
 
 <script>
-/* ===== Telegram ===== */
-if (window.Telegram && Telegram.WebApp) {
-    Telegram.WebApp.ready();
-    Telegram.WebApp.expand();
-}
-
-/* ===== 密码逻辑 ===== */
-const PASSWORD = "3333";
-
-function checkPwd(){
-    const v = document.getElementById("pwd").value;
-    if(v === PASSWORD){
-        document.getElementById("lockScreen").style.display="none";
-    }else{
-        document.getElementById("errorMsg").style.display="block";
-    }
-}
-
-document.getElementById("pwd").addEventListener("keydown",e=>{
-    if(e.key==="Enter") checkPwd();
-});
-
-/* ===== 业务逻辑 ===== */
-let history = [];
-let lastPrediction = null;
-let failCount = 0;
-
-function add(r){
-    history.push(r);
-    analyze();
-}
-
-function cleanHistory(){
-    return history.filter(x=>x!=='T');
-}
-
-function analyze(){
-    document.getElementById("round").innerText = "局数：" + history.length;
-    document.getElementById("history").innerText = history.join(" ");
-
-    let h = cleanHistory();
-    if(h.length < 6){
-        show("-", "-", "观察中", "");
-        return;
-    }
-
-    let pattern = "观察";
-    let prediction = null;
-
-    let streak = 1;
-    for(let i=h.length-1;i>0;i--){
-        if(h[i]===h[i-1]) streak++;
-        else break;
-    }
-    if(streak>=4){
-        pattern = "长龙 ("+streak+")";
-        prediction = h[h.length-1];
-    }
-
-    if(!prediction){
-        let jump = true;
-        for(let i=h.length-6;i<h.length-1;i++){
-            if(h[i]===h[i+1]){ jump=false; break;}
-        }
-        if(jump){
-            pattern = "单跳节奏";
-            prediction = h[h.length-1]==='B'?'P':'B';
+    // --- 密码保护逻辑 ---
+    function checkPassword() {
+        const pass = document.getElementById('password-input').value;
+        const errorMsg = document.getElementById('login-error');
+        
+        if (pass === "123456") {
+            sessionStorage.setItem("isLoggedIn", "true");
+            showApp();
+        } else {
+            errorMsg.style.visibility = "visible";
+            document.getElementById('password-input').value = "";
         }
     }
 
-    if(!prediction){
-        let a = h.slice(-3).join("");
-        let b = h.slice(-6,-3).join("");
-        if((a==="BBP" && b==="BBP") || (a==="PPB" && b==="PPB")){
-            pattern = "两方一厅";
-            prediction = a[0];
+    function showApp() {
+        document.getElementById('login-overlay').style.display = "none";
+        document.getElementById('main-content').style.display = "block";
+    }
+
+    function logout() {
+        sessionStorage.removeItem("isLoggedIn");
+        location.reload();
+    }
+
+    // 自动检查登录状态
+    window.onload = function() {
+        if (sessionStorage.getItem("isLoggedIn") === "true") {
+            showApp();
+        }
+    };
+
+    // --- 分析仪核心逻辑 ---
+    let rawHistory = []; 
+    let cleanData = [];  
+    let lastPrediction = null; 
+    let loseCount = 0;   
+    let winStreakInWatch = 0; 
+    let isWatching = false; 
+
+    function handleInput(type) {
+        if (lastPrediction && type !== 'T') {
+            if (type === lastPrediction) {
+                if (isWatching) { winStreakInWatch++; addLog(`虚拟命中 (${winStreakInWatch}/2)`); } 
+                else { loseCount = 0; addLog("预测正确"); }
+            } else {
+                if (isWatching) { winStreakInWatch = 0; addLog("虚拟错误，重置观察"); } 
+                else { loseCount++; addLog(`错误，连输 ${loseCount} 次`); }
+            }
+        }
+
+        if (!isWatching && loseCount >= 2) {
+            isWatching = true; winStreakInWatch = 0;
+        } else if (isWatching && winStreakInWatch >= 2) {
+            isWatching = false; loseCount = 0;
+        }
+
+        rawHistory.push(type);
+        if (type !== 'T') cleanData.push(type);
+        renderUI();
+        runAnalysis();
+    }
+
+    function runAnalysis() {
+        const nextMoveDiv = document.getElementById('next-move');
+        const reasonDiv = document.getElementById('reason');
+        const statusTag = document.getElementById('status-tag');
+        if (cleanData.length < 3) { nextMoveDiv.innerText = "数据不足"; return; }
+
+        let pred = null; let reason = "观察走势";
+        const d = cleanData; const n = d.length;
+        const L = d[n-1], L2 = d[n-2], L3 = d[n-3], L4 = d[n-4], L5 = d[n-5];
+
+        // 简易逻辑引擎
+        if (L === L2 && L2 === L3 && L3 === L4) { pred = L; reason = "顺龙模式"; }
+        else if (L !== L2 && L2 !== L3) { pred = (L === 'B' ? 'P' : 'B'); reason = "单跳模式"; }
+        else if (L === L2 && L2 !== L3 && L3 !== L4 && L4 === L5) { pred = (L === 'B' ? 'P' : 'B'); reason = "两房一厅"; }
+        else if (L === L2 && L2 !== L3) { pred = L; reason = "连后跟连"; }
+
+        lastPrediction = pred;
+
+        if (isWatching) {
+            statusTag.innerText = "已止损-观察中";
+            statusTag.className = "status-tag status-watching";
+            nextMoveDiv.innerText = "--";
+            reasonDiv.innerText = `虚拟验证中: 需连中2次恢复`;
+        } else {
+            statusTag.innerText = "分析中";
+            statusTag.className = "status-tag status-active";
+            if (pred) {
+                nextMoveDiv.innerText = (pred === 'B' ? "庄" : "闲");
+                nextMoveDiv.style.color = (pred === 'B' ? "#f44336" : "#2196f3");
+                reasonDiv.innerText = reason;
+            } else {
+                nextMoveDiv.innerText = "观望";
+                reasonDiv.innerText = "暂无高概率信号";
+            }
         }
     }
 
-    if(lastPrediction && prediction){
-        let lastResult = h[h.length-1];
-        if(lastPrediction!==lastResult) failCount++;
-        else failCount=0;
+    function renderUI() {
+        const box = document.getElementById('history-box');
+        box.innerHTML = rawHistory.slice(-20).map(item => `<div class="dot ${item}">${item}</div>`).join('');
+        document.getElementById('lose-count').innerText = loseCount;
+        document.getElementById('win-streak').innerText = winStreakInWatch;
     }
-    lastPrediction = prediction;
 
-    if(failCount>=2){
-        show(pattern, "-", "系统正在计算，不建议下注", "danger");
-    }else{
-        show(pattern, prediction? (prediction==="B"?"庄":"闲"):"-", "可观察", "good");
+    function addLog(msg) {
+        const log = document.getElementById('log');
+        log.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}<br>` + log.innerHTML;
     }
-}
 
-function show(pat, pred, risk, cls){
-    document.getElementById("pattern").innerText = "识别形态：" + pat;
-    document.getElementById("predict").innerText = "预测方向：" + pred;
-    let r = document.getElementById("risk");
-    r.innerText = "系统状态：" + risk;
-    r.classList.remove("danger","warn","good");
-    if(cls) r.classList.add(cls);
-}
-
-function resetAll(){
-    history=[];
-    lastPrediction=null;
-    failCount=0;
-    document.getElementById("round").innerText="局数：0";
-    document.getElementById("pattern").innerText="识别形态：-";
-    document.getElementById("predict").innerText="预测方向：-";
-    document.getElementById("risk").innerText="系统状态：-";
-    document.getElementById("history").innerText="";
-}
-
-document.addEventListener("DOMContentLoaded", ()=>{
-    btnB.onclick=()=>add('B');
-    btnP.onclick=()=>add('P');
-    btnT.onclick=()=>add('T');
-    btnR.onclick=resetAll;
-});
+    function reset() {
+        rawHistory = []; cleanData = []; lastPrediction = null; 
+        loseCount = 0; winStreakInWatch = 0; isWatching = false;
+        renderUI(); runAnalysis();
+        document.getElementById('log').innerText = "数据已清空";
+    }
 </script>
 
 </body>
