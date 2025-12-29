@@ -45,9 +45,65 @@ button {
     font-size:14px;
     word-break:break-all;
 }
+
+/* ===== 密码遮罩 ===== */
+#lockScreen {
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.92);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+}
+
+#lockBox {
+    background:#1c1c1c;
+    padding:30px;
+    border-radius:10px;
+    width:280px;
+}
+
+#lockBox h2 {
+    color:gold;
+    margin-bottom:15px;
+}
+
+#lockBox input {
+    width:100%;
+    padding:10px;
+    font-size:16px;
+    border-radius:5px;
+    border:none;
+    text-align:center;
+}
+
+#lockBox button {
+    width:100%;
+    margin-top:12px;
+    background:gold;
+    color:#000;
+    font-weight:bold;
+}
+
+#errorMsg {
+    color:red;
+    margin-top:10px;
+    display:none;
+}
 </style>
 </head>
 <body>
+
+<!-- ===== 密码层 ===== -->
+<div id="lockScreen">
+    <div id="lockBox">
+        <h2>请输入密码</h2>
+        <input type="password" id="pwd" placeholder="Password">
+        <button onclick="checkPwd()">进入系统</button>
+        <div id="errorMsg">密码错误</div>
+    </div>
+</div>
 
 <h1>Baccarat Trend Analyzer · PRO</h1>
 
@@ -71,11 +127,29 @@ button {
 </div>
 
 <script>
+/* ===== Telegram ===== */
 if (window.Telegram && Telegram.WebApp) {
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
 }
 
+/* ===== 密码逻辑 ===== */
+const PASSWORD = "123456";
+
+function checkPwd(){
+    const v = document.getElementById("pwd").value;
+    if(v === PASSWORD){
+        document.getElementById("lockScreen").style.display="none";
+    }else{
+        document.getElementById("errorMsg").style.display="block";
+    }
+}
+
+document.getElementById("pwd").addEventListener("keydown",e=>{
+    if(e.key==="Enter") checkPwd();
+});
+
+/* ===== 业务逻辑 ===== */
 let history = [];
 let lastPrediction = null;
 let failCount = 0;
@@ -102,7 +176,6 @@ function analyze(){
     let pattern = "观察";
     let prediction = null;
 
-    // 长龙
     let streak = 1;
     for(let i=h.length-1;i>0;i--){
         if(h[i]===h[i-1]) streak++;
@@ -113,7 +186,6 @@ function analyze(){
         prediction = h[h.length-1];
     }
 
-    // 单跳
     if(!prediction){
         let jump = true;
         for(let i=h.length-6;i<h.length-1;i++){
@@ -125,7 +197,6 @@ function analyze(){
         }
     }
 
-    // 两方一厅
     if(!prediction){
         let a = h.slice(-3).join("");
         let b = h.slice(-6,-3).join("");
@@ -135,7 +206,6 @@ function analyze(){
         }
     }
 
-    // 风控
     if(lastPrediction && prediction){
         let lastResult = h[h.length-1];
         if(lastPrediction!==lastResult) failCount++;
@@ -170,12 +240,11 @@ function resetAll(){
     document.getElementById("history").innerText="";
 }
 
-// ====== 关键：保证 Telegram + 浏览器都能点 ======
-document.addEventListener("DOMContentLoaded", function(){
-    document.getElementById("btnB").addEventListener("click", ()=>add('B'));
-    document.getElementById("btnP").addEventListener("click", ()=>add('P'));
-    document.getElementById("btnT").addEventListener("click", ()=>add('T'));
-    document.getElementById("btnR").addEventListener("click", resetAll);
+document.addEventListener("DOMContentLoaded", ()=>{
+    btnB.onclick=()=>add('B');
+    btnP.onclick=()=>add('P');
+    btnT.onclick=()=>add('T');
+    btnR.onclick=resetAll;
 });
 </script>
 
